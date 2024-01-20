@@ -1,0 +1,6 @@
+offer;base;hp;hc
+bleu;0.2276;0.246;0.1828
+vert;0.2347;0.2523;0.1891
+tempo_bleu;;0.1369;0.1056
+tempo_blanc;;0.1654;0.1246
+tempo_rouge;;0.7324;0.1328
