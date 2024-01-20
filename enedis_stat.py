@@ -3,10 +3,11 @@ import pandas as pd
 region_utc = 'Europe/Paris'
 
 data_path = 'data/2023/'
-enedis_consumption_file = data_path + 'enedis-hours.csv'   # per hours (or better) format !
-price_file= data_path + 'price.csv'                        # price for bleu/vert/tempo
-hchp_file= data_path + 'hchp.csv'                          # hp/hc timerange info
-tempo_calendar_file= data_path + 'tempo_calendar.csv'      # BLEU/ROUGE/BLANC tempo day
+enedis_consumption_file = data_path + 'enedis-hours-v2.csv'   # per hours (or better) format !
+price_file = data_path + 'price.csv'                        # price for bleu/vert/tempo
+hchp_file = data_path + 'hchp.csv'                          # hp/hc timerange info
+tempo_calendar_file = data_path + 'tempo_calendar.csv'      # BLEU/ROUGE/BLANC tempo day
+ejp_calendar_file = data_path + 'ejp_calendar.csv'          # EJP day
 
         # Read CSV file with date and avg_consumption columns
 data = pd.read_csv(enedis_consumption_file, sep=';', header=None, names=['date', 'avg_consumption'])
@@ -49,6 +50,20 @@ def check_time_ranges(date, hchp):
             return 'hc'
     return 'hp'
 data['hchp'] = data['date'].apply(lambda x: check_time_ranges(x, hchp))
+
+####
+# EJP
+####
+ejp_calendar = pd.read_csv(ejp_calendar_file, sep=';')
+
+def check_ejp_calendar(date, ejp_calendar):
+    day = date.strftime('%Y-%m-%d') # date formatted as 2023-01-01
+    for i in range(len(ejp_calendar)):
+        if day == ejp_calendar.iloc[i, 0]:
+            return True
+    return False
+
+data['ejp'] = data['date'].apply(lambda x: check_ejp_calendar(x, ejp_calendar))
 
 ####
 # TEMPO COLOR
@@ -114,15 +129,25 @@ price_tempo_hphc['unknown'] = price_tempo_hphc['BLEU']
 
 data['price_tempo_hphc'] = data.apply(lambda row: compute_price_tempo_hphc(row, price_tempo_hphc), axis=1)
 
-# consumption_by_month = data.groupby(data['date'].dt.to_period('M'))['consumption'].sum()
+# Compute ejp price
+price_ejp = [ get_price('ejp','base'), get_price('ejp','hp')]
 
+
+def compute_ejp_price(row, price_ejp):
+    return price_ejp[row['ejp']] * row['consumption'] / 1000.0
+
+data['price_ejp'] = data.apply(lambda row: compute_ejp_price(row, price_ejp), axis=1)
+
+
+# Compute month pricing
 price_bleu_by_month = data.groupby(data['date'].dt.to_period('M'))['price_bleu'].sum()
 price_vert_by_month = data.groupby(data['date'].dt.to_period('M'))['price_vert'].sum()
 price_bleu_hchp_by_month = data.groupby(data['date'].dt.to_period('M'))['price_bleu_hchp'].sum()
 price_vert_hchp_by_month = data.groupby(data['date'].dt.to_period('M'))['price_vert_hchp'].sum()
 price_tempo_hphc_by_month = data.groupby(data['date'].dt.to_period('M'))['price_tempo_hphc'].sum()
+price_ejp_by_month = data.groupby(data['date'].dt.to_period('M'))['price_ejp'].sum()
 
-all_price = pd.concat([price_bleu_by_month, price_bleu_hchp_by_month,price_vert_by_month, price_vert_hchp_by_month,price_tempo_hphc_by_month], axis=1)
+all_price = pd.concat([price_bleu_by_month, price_bleu_hchp_by_month,price_vert_by_month, price_vert_hchp_by_month,price_tempo_hphc_by_month,price_ejp_by_month], axis=1)
 print(all_price)
 
 annual_price = all_price.sum()
