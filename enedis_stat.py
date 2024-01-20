@@ -88,11 +88,11 @@ def get_price(offer, type):
     return price.loc[price['offer'] == offer, type].values[0]
 
 # Compute blue price
-base_price = price.loc[price['offer'] == 'bleu', 'base'].values[0]
+base_price = get_price('bleu','base')
 data['price_bleu'] = data['consumption'] / 1000.0 * base_price
 
 # Compute vert price
-base_price = price.loc[price['offer'] == 'vert', 'base'].values[0]
+base_price = get_price('vert','base')
 data['price_vert'] = data['consumption'] / 1000.0 * base_price
 
 def compute_price_hphc(row, price_hchp):
